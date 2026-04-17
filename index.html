@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wiper Express — AI Agent Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --wx-black:#0A0A0A;--wx-white:#FFFFFF;
+  --wx-blue:#0057FF;--wx-blue-dark:#003DBF;--wx-blue-light:#E5EEFF;
+  --wx-fog:#F3F4F6;--wx-gray-200:#EDEDED;--wx-gray-400:#AAAAAA;
+  --wx-gray-600:#666666;--wx-gray-800:#2A2A2A;
+  --s-live:#16A34A;--s-live-bg:#DCFCE7;
+  --s-progress:#0057FF;--s-progress-bg:#E5EEFF;
+  --s-planned:#D97706;--s-planned-bg:#FEF3C7;
+  --s-scope:#6B7280;--s-scope-bg:#F3F4F6;
+  --font-display:'Barlow Condensed',sans-serif;
+  --font-body:'DM Sans',sans-serif;
+  --font-mono:'DM Mono',monospace;
+}
+html{scroll-behavior:smooth}
+body{font-family:var(--font-body);background:var(--wx-fog);color:var(--wx-black);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;min-height:100vh;}
+
+/* HEADER */
+.header{background:var(--wx-black);padding:28px 40px;position:sticky;top:0;z-index:100;border-bottom:1px solid #1a1a1a;}
+.header-inner{max-width:1400px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:24px;}
+.header-left{display:flex;align-items:center;gap:20px}
+.header-logo{font-family:var(--font-display);font-size:22px;font-weight:800;letter-spacing:.06em;color:#fff;text-transform:uppercase;}
+.header-logo span{color:var(--wx-blue)}
+.header-div{width:1px;height:26px;background:rgba(255,255,255,.12)}
+.header-title{font-family:var(--font-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.4);}
+.header-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.lpill{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:100px;padding:5px 11px;font-family:var(--font-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.45);}
+.ldot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.d-live{background:var(--s-live)}.d-prog{background:var(--s-progress)}.d-plan{background:var(--s-planned)}.d-scope{background:var(--s-scope)}
+
+/* STATS */
+.statsbar{background:#fff;border-bottom:1px solid var(--wx-gray-200);padding:14px 40px;}
+.statsbar-inner{max-width:1400px;margin:0 auto;display:flex;align-items:center;gap:28px;flex-wrap:wrap;}
+.stat{display:flex;align-items:baseline;gap:7px}
+.snum{font-family:var(--font-display);font-size:26px;font-weight:800;letter-spacing:.02em;line-height:1;}
+.slbl{font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--wx-gray-600);}
+.sdiv{width:1px;height:26px;background:var(--wx-gray-200)}
+.snum.blue{color:var(--wx-blue)}.snum.green{color:var(--s-live)}.snum.amber{color:var(--s-planned)}.snum.gray{color:var(--s-scope)}
+
+/* MAIN */
+.main{max-width:1400px;margin:0 auto;padding:36px 40px}
+
+/* DEPT */
+.dept-card{background:#fff;border:1px solid var(--wx-gray-200);border-radius:10px;margin-bottom:18px;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden;transition:box-shadow .2s;}
+.dept-card:hover{box-shadow:0 6px 28px rgba(0,0,0,.1)}
+.dept-hdr{display:flex;align-items:center;padding:18px 26px;cursor:pointer;user-select:none;gap:14px;}
+.dept-ico{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.dept-info{flex:1;min-width:0}
+.dept-name{font-family:var(--font-display);font-size:21px;font-weight:700;letter-spacing:.04em;line-height:1.1;text-transform:uppercase;}
+.dept-desc{font-size:12px;color:var(--wx-gray-600);margin-top:2px;font-weight:300;}
+.dept-badges{display:flex;gap:7px;align-items:center;flex-shrink:0;}
+.badge{display:flex;align-items:center;gap:4px;font-family:var(--font-mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border-radius:100px;white-space:nowrap;}
+.badge.live{background:var(--s-live-bg);color:var(--s-live)}.badge.progress{background:var(--s-progress-bg);color:var(--s-progress)}.badge.planned{background:var(--s-planned-bg);color:var(--s-planned)}.badge.scope{background:var(--s-scope-bg);color:var(--s-scope)}
+.dept-chev{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--wx-fog);color:var(--wx-gray-600);transition:transform .25s,background .2s;flex-shrink:0;}
+.dept-hdr.open .dept-chev{transform:rotate(180deg);background:var(--wx-blue-light);color:var(--wx-blue)}
+.dept-body{display:none;border-top:1px solid var(--wx-gray-200);background:var(--wx-fog);padding:20px 26px;gap:14px;flex-direction:column;}
+.dept-body.open{display:flex}
+
+/* CATEGORY */
+.cat{background:#fff;border:1px solid var(--wx-gray-200);border-radius:8px;overflow:hidden;}
+.cat-hdr{display:flex;align-items:center;gap:12px;padding:13px 18px;cursor:pointer;user-select:none;}
+.cat-dot{width:8px;height:8px;border-radius:50%;background:var(--wx-blue);flex-shrink:0;}
+.cat-name{font-family:var(--font-display);font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;flex:1;}
+.cat-count{font-family:var(--font-mono);font-size:10px;color:var(--wx-gray-400);letter-spacing:.08em;}
+.cat-chev{width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:50%;color:var(--wx-gray-400);transition:transform .2s;}
+.cat-hdr.open .cat-chev{transform:rotate(180deg);color:var(--wx-blue)}
+.cat-body{display:none;border-top:1px solid var(--wx-gray-200);background:var(--wx-fog);padding:14px;gap:9px;flex-direction:column;}
+.cat-body.open{display:flex}
+
+/* AGENT */
+.agent{background:#fff;border:1px solid var(--wx-gray-200);border-radius:8px;cursor:pointer;transition:border-color .18s,box-shadow .18s;overflow:hidden;}
+.agent:hover{border-color:var(--wx-blue);box-shadow:0 2px 10px rgba(0,87,255,.1);}
+.agent.active{border-color:var(--wx-blue);box-shadow:0 0 0 3px rgba(0,87,255,.09);}
+.agent-top{display:flex;align-items:center;gap:11px;padding:13px 16px;}
+.adot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:1px;}
+.aname{font-family:var(--font-body);font-size:13px;font-weight:500;flex:1;line-height:1.3;}
+.abadge{font-family:var(--font-mono);font-size:9px;letter-spacing:.07em;text-transform:uppercase;padding:3px 8px;border-radius:100px;flex-shrink:0;}
+
+/* DETAIL */
+.agent-detail{display:none;border-top:1px solid var(--wx-gray-200);padding:16px 16px 18px;background:var(--wx-fog);gap:13px;flex-direction:column;}
+.agent.active .agent-detail{display:flex}
+.ddesc{font-size:12px;color:var(--wx-gray-800);line-height:1.65;font-weight:300;}
+.dgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.dfield{background:#fff;border:1px solid var(--wx-gray-200);border-radius:6px;padding:10px 12px;}
+.dflbl{font-family:var(--font-mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--wx-gray-400);margin-bottom:4px;}
+.dfval{font-size:12px;color:var(--wx-gray-800);font-weight:400;line-height:1.4;}
+.dimpact{background:var(--wx-blue-light);border:1px solid rgba(0,87,255,.15);border-radius:6px;padding:10px 12px;grid-column:1/-1;}
+.dimpact .dflbl{color:var(--wx-blue-dark)}.dimpact .dfval{color:var(--wx-blue-dark);font-weight:500}
+.dtasks{grid-column:1/-1}
+.dtask-lbl{font-family:var(--font-mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--wx-gray-400);margin-bottom:7px;}
+.dtask-list{display:flex;flex-wrap:wrap;gap:6px}
+.dtask-pill{font-size:11px;color:var(--wx-gray-800);background:#fff;border:1px solid var(--wx-gray-200);border-radius:100px;padding:3px 10px;}
+
+/* BUILD BUTTON */
+.dactions{display:flex;align-items:center;gap:12px;padding-top:6px;border-top:1px solid var(--wx-gray-200);}
+.btn-build{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--wx-blue);color:#fff;
+  border:none;border-radius:8px;padding:11px 20px;
+  font-family:var(--font-body);font-size:13px;font-weight:500;
+  cursor:pointer;letter-spacing:.01em;
+  transition:background .15s,transform .1s,box-shadow .15s;
+  box-shadow:0 2px 10px rgba(0,87,255,.3);white-space:nowrap;
+}
+.btn-build:hover{background:var(--wx-blue-dark);box-shadow:0 4px 18px rgba(0,87,255,.4);transform:translateY(-1px);}
+.btn-build:active{transform:translateY(0)}
+.bhint{font-family:var(--font-mono);font-size:10px;letter-spacing:.06em;color:var(--wx-gray-400);line-height:1.5;}
+
+/* ═══════════════════════════════════════
+   MODAL
+══════════════════════════════════════ */
+.modal-overlay{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,.55);
+  backdrop-filter:blur(4px);
+  z-index:1000;
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;
+  opacity:0;pointer-events:none;
+  transition:opacity .2s;
+}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{
+  background:#fff;
+  border-radius:14px;
+  box-shadow:0 24px 80px rgba(0,0,0,.3);
+  width:100%;max-width:680px;
+  max-height:90vh;
+  display:flex;flex-direction:column;
+  transform:translateY(16px) scale(.98);
+  transition:transform .22s;
+  overflow:hidden;
+}
+.modal-overlay.open .modal{transform:translateY(0) scale(1)}
+
+.modal-header{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  padding:22px 24px 16px;
+  border-bottom:1px solid var(--wx-gray-200);
+  gap:16px;
+  flex-shrink:0;
+}
+.modal-header-left{flex:1;min-width:0}
+.modal-eyebrow{
+  font-family:var(--font-mono);font-size:9px;
+  letter-spacing:.14em;text-transform:uppercase;
+  color:var(--wx-blue);margin-bottom:5px;
+}
+.modal-title{
+  font-family:var(--font-display);font-size:20px;font-weight:700;
+  letter-spacing:.03em;line-height:1.2;
+  text-transform:uppercase;
+}
+.modal-close{
+  width:30px;height:30px;flex-shrink:0;
+  background:var(--wx-fog);border:none;border-radius:50%;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  color:var(--wx-gray-600);
+  transition:background .15s,color .15s;margin-top:2px;
+}
+.modal-close:hover{background:var(--wx-gray-200);color:var(--wx-black)}
+
+.modal-steps{
+  display:flex;align-items:center;gap:0;
+  padding:14px 24px;
+  background:var(--wx-fog);
+  border-bottom:1px solid var(--wx-gray-200);
+  flex-shrink:0;
+}
+.mstep{display:flex;align-items:center;gap:8px;flex:1;}
+.mstep-num{
+  width:22px;height:22px;border-radius:50%;
+  background:var(--wx-blue);color:#fff;
+  font-family:var(--font-mono);font-size:10px;font-weight:500;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.mstep-txt{font-size:12px;color:var(--wx-gray-800);font-weight:400;}
+.mstep-arr{color:var(--wx-gray-400);font-size:16px;margin:0 6px;flex-shrink:0;}
+
+.modal-prompt-area{
+  flex:1;overflow-y:auto;
+  padding:16px 24px;
+}
+.prompt-lbl{
+  font-family:var(--font-mono);font-size:9px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--wx-gray-400);margin-bottom:8px;
+}
+.prompt-box{
+  width:100%;min-height:220px;
+  font-family:var(--font-mono);font-size:11px;line-height:1.6;
+  color:var(--wx-gray-800);
+  background:var(--wx-fog);
+  border:1px solid var(--wx-gray-200);
+  border-radius:8px;
+  padding:14px 16px;
+  resize:vertical;
+  outline:none;
+  transition:border-color .15s;
+}
+.prompt-box:focus{border-color:var(--wx-blue)}
+
+.modal-footer{
+  display:flex;gap:10px;align-items:center;
+  padding:16px 24px;
+  border-top:1px solid var(--wx-gray-200);
+  flex-shrink:0;
+}
+.btn-copy{
+  display:inline-flex;align-items:center;gap:7px;
+  background:var(--wx-blue);color:#fff;
+  border:none;border-radius:8px;
+  padding:11px 20px;
+  font-family:var(--font-body);font-size:13px;font-weight:500;
+  cursor:pointer;transition:background .15s,transform .1s;
+  box-shadow:0 2px 10px rgba(0,87,255,.3);
+  flex-shrink:0;
+}
+.btn-copy:hover{background:var(--wx-blue-dark);transform:translateY(-1px);}
+.btn-copy.copied{background:var(--s-live);box-shadow:0 2px 10px rgba(22,163,74,.3);}
+.btn-claude{
+  display:inline-flex;align-items:center;gap:7px;
+  background:var(--wx-black);color:#fff;
+  border:none;border-radius:8px;
+  padding:11px 20px;
+  font-family:var(--font-body);font-size:13px;font-weight:500;
+  cursor:pointer;transition:background .15s,transform .1s;
+  text-decoration:none;flex-shrink:0;
+}
+.btn-claude:hover{background:#1a1a1a;transform:translateY(-1px);}
+.modal-footer-hint{
+  font-family:var(--font-mono);font-size:10px;
+  letter-spacing:.06em;color:var(--wx-gray-400);
+  line-height:1.5;margin-left:4px;
+}
+
+/* DEPT ACCENTS */
+.dept-card[data-dept="exec"] .dept-hdr{border-left:4px solid #7C3AED}
+.dept-card[data-dept="exec"] .dept-ico{background:#F5F3FF;color:#7C3AED}
+.dept-card[data-dept="exec"] .cat-dot{background:#7C3AED}
+.dept-card[data-dept="sales"] .dept-hdr{border-left:4px solid var(--wx-blue)}
+.dept-card[data-dept="sales"] .dept-ico{background:var(--wx-blue-light);color:var(--wx-blue)}
+.dept-card[data-dept="marketing"] .dept-hdr{border-left:4px solid #DB2777}
+.dept-card[data-dept="marketing"] .dept-ico{background:#FDF2F8;color:#DB2777}
+.dept-card[data-dept="marketing"] .cat-dot{background:#DB2777}
+.dept-card[data-dept="ops"] .dept-hdr{border-left:4px solid #D97706}
+.dept-card[data-dept="ops"] .dept-ico{background:#FFFBEB;color:#D97706}
+.dept-card[data-dept="ops"] .cat-dot{background:#D97706}
+.dept-card[data-dept="cx"] .dept-hdr{border-left:4px solid #0891B2}
+.dept-card[data-dept="cx"] .dept-ico{background:#ECFEFF;color:#0891B2}
+.dept-card[data-dept="cx"] .cat-dot{background:#0891B2}
+.dept-card[data-dept="finance"] .dept-hdr{border-left:4px solid var(--s-live)}
+.dept-card[data-dept="finance"] .dept-ico{background:var(--s-live-bg);color:var(--s-live)}
+.dept-card[data-dept="finance"] .cat-dot{background:var(--s-live)}
+.dept-card[data-dept="product"] .dept-hdr{border-left:4px solid #EA580C}
+.dept-card[data-dept="product"] .dept-ico{background:#FFF7ED;color:#EA580C}
+.dept-card[data-dept="product"] .cat-dot{background:#EA580C}
+
+.footer{max-width:1400px;margin:0 auto;padding:0 40px 56px;display:flex;align-items:center;justify-content:space-between;}
+.fmeta{font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--wx-gray-400);}
+
+@media(max-width:860px){
+  .header{padding:18px 20px}.statsbar{padding:12px 20px}.main{padding:20px}
+  .footer{padding:0 20px 40px}.header-right{display:none}
+  .dgrid{grid-template-columns:1fr}.dept-badges .badge:not(.live){display:none}
+  .modal-steps{flex-direction:column;gap:6px;align-items:flex-start}
+  .mstep-arr{display:none}
+  .modal-footer{flex-wrap:wrap}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-inner">
+    <div class="header-left">
+      <div class="header-logo">WIPER<span>EXPRESS</span></div>
+      <div class="header-div"></div>
+      <div class="header-title">AI Agent Map — 2025</div>
+    </div>
+    <div class="header-right">
+      <div class="lpill"><span class="ldot d-live"></span>Live / Built</div>
+      <div class="lpill"><span class="ldot d-prog"></span>In Progress</div>
+      <div class="lpill"><span class="ldot d-plan"></span>Planned</div>
+      <div class="lpill"><span class="ldot d-scope"></span>Needs Scoping</div>
+    </div>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="statsbar"><div class="statsbar-inner" id="statsBar"></div></div>
+
+<!-- MAIN -->
+<div class="main" id="main"></div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <div class="fmeta">Wiper Express · AI Operations Map · Confidential</div>
+  <div class="fmeta" id="footerDate"></div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOutside(event)">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <div class="modal-header-left">
+        <div class="modal-eyebrow">Help Me Build This Agent</div>
+        <div class="modal-title" id="modalTitle">Agent Name</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-steps">
+      <div class="mstep"><div class="mstep-num">1</div><div class="mstep-txt">Copy the prompt below</div></div>
+      <div class="mstep-arr">→</div>
+      <div class="mstep"><div class="mstep-num">2</div><div class="mstep-txt">Open Claude.ai in a new tab</div></div>
+      <div class="mstep-arr">→</div>
+      <div class="mstep"><div class="mstep-num">3</div><div class="mstep-txt">Paste &amp; send — Claude guides you</div></div>
+    </div>
+    <div class="modal-prompt-area">
+      <div class="prompt-lbl">Your tailored build prompt — ready to paste into Claude</div>
+      <textarea class="prompt-box" id="promptBox" readonly></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-copy" id="btnCopy" onclick="copyPrompt()">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="4" y="4" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M2 10V2.5A.5.5 0 012.5 2H10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <span id="btnCopyTxt">Copy Prompt</span>
+      </button>
+      <a class="btn-claude" href="https://claude.ai/new" target="_blank" rel="noopener">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5C4.015 1.5 1.5 4.015 1.5 7S4.015 12.5 7 12.5 12.5 9.985 12.5 7 9.985 1.5 7 1.5zM7 9.5a.875.875 0 110-1.75A.875.875 0 017 9.5zm.875-3.25a.875.875 0 11-1.75 0V4.5a.875.875 0 111.75 0v1.75z" fill="white"/></svg>
+        Open Claude.ai
+      </a>
+      <div class="modal-footer-hint">Both steps needed — copy first, then paste into Claude</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const STATUS = {
+  live:     {label:'Live / Built',      cls:'live',     dot:'#16A34A'},
+  progress: {label:'In Progress',       cls:'progress', dot:'#0057FF'},
+  planned:  {label:'Planned / Next Up', cls:'planned',  dot:'#D97706'},
+  scope:    {label:'Needs Scoping',     cls:'scope',    dot:'#6B7280'},
+};
+
+const DEPARTMENTS = [
+  {id:'exec',emoji:'🏛️',name:'Executive / Leadership',
+   desc:'Strategic intelligence, oversight, and company-wide AI coordination',
+   categories:[{name:'Strategic Intelligence',agents:[
+    {name:'Market Intelligence Agent',status:'planned',
+     desc:'Continuously monitors competitor activity, industry trends, pricing signals, and regulatory changes. Delivers structured briefings to leadership on a weekly or event-driven cadence.',
+     platform:'Claude API + Web Search',owner:'CEO / VP Sales',
+     impact:'Eliminates 4–6 hrs/week of manual research; surfaces competitive threats before they affect revenue',
+     inputs:'Target competitor list, product categories, news sources',
+     outputs:'Weekly intelligence brief delivered via Microsoft 365 Outlook',
+     tasks:['Competitor pricing monitor','Trade publication digest','Regulatory watch alerts','Trend summary report']},
+    {name:'KPI Dashboard Agent',status:'scope',
+     desc:'Pulls key metrics from Microsoft Business Central and connected systems — orders, AR, web traffic — and compiles an automated executive summary with variance analysis and plain-English commentary.',
+     platform:'Claude API + Microsoft Business Central + Power BI',owner:'CEO / CFO',
+     impact:'One consolidated view across all business functions; replaces fragmented spreadsheet reporting',
+     inputs:'Business Central data: orders, AR, AP, inventory; web analytics',
+     outputs:'Daily/weekly exec dashboard via Microsoft 365; Power BI report',
+     tasks:['Business Central data pull','Variance commentary generator','Power BI chart rendering','Anomaly alert via Outlook']},
+    {name:'Board & Investor Briefing Generator',status:'scope',
+     desc:'Transforms Business Central financial data and key metrics into polished, formatted briefing documents suitable for board reviews, investor updates, or bank presentations.',
+     platform:'Claude API + Microsoft Business Central',owner:'CEO',
+     impact:'Cuts document prep from days to under an hour; consistent professional formatting every time',
+     inputs:'Business Central KPI exports, narrative notes, prior period comparisons',
+     outputs:'Formatted Word document or PDF briefing, distributed via Microsoft 365 Outlook',
+     tasks:['Business Central data export','Data-to-narrative conversion','Word document formatting','Outlook distribution']},
+    {name:'AI Roadmap Planner (This Tool)',status:'live',
+     desc:'Visual, interactive map of all AI agents planned, in progress, and deployed across Wiper Express. Used for strategic prioritization and cross-team alignment on the AI buildout.',
+     platform:'Custom HTML (Claude-built)',owner:'Arthur Leardi / Leadership',
+     impact:'Single source of truth for AI strategy; accelerates prioritization conversations',
+     inputs:'Agent definitions, status updates',
+     outputs:'Interactive HTML org chart',
+     tasks:['Department-level grouping','Status tracking','Agent detail panels','Build priority visualization']},
+  ]}]},
+
+  {id:'sales',emoji:'📈',name:'Sales & Business Development',
+   desc:'Lead generation, prospect research, private label acquisition, and customer onboarding',
+   categories:[
+    {name:'Lead Generation & Prospecting',agents:[
+      {name:'Prospect Research Agent',status:'planned',
+       desc:'Given a target company name or market segment, automatically builds a detailed prospect profile: company size, distribution footprint, current wiper supplier, key contacts, and estimated volume potential.',
+       platform:'Claude API + Web Search',owner:'Sales Team',
+       impact:'Turns cold call prep from 30 min to 2 min per prospect; enables higher-quality outreach at scale',
+       inputs:'Target company name or segment criteria',
+       outputs:'Structured prospect profile; summary email via Microsoft 365 Outlook',
+       tasks:['Company profile enrichment','Contact identification','Competitive supplier lookup','Volume potential estimate']},
+      {name:'Lead Qualification Agent',status:'scope',
+       desc:'Scores and ranks inbound leads based on fit criteria including geography, volume potential, and channel type. Syncs with Microsoft Business Central contact records.',
+       platform:'Claude API + Microsoft Business Central (Customer/Contact records)',owner:'Sales Manager',
+       impact:'Prioritizes the highest-value opportunities so reps spend time where it counts',
+       inputs:'Inbound lead data, Business Central contact records',
+       outputs:'Scored lead list; priority alert via Outlook; Business Central record update',
+       tasks:['Fit scoring model','Business Central sync','Weekly priority report','High-score lead Outlook alert']},
+    ]},
+    {name:'Customer Acquisition',agents:[
+      {name:'Private Label RFQ Form',status:'live',
+       desc:'Web form that captures private label inquiries, routes submissions via Microsoft 365 Outlook email notification, and logs all data to Google Sheets. Deployed at privatelabelapp.autotexwipers.com.',
+       platform:'Vercel / Node.js / Google Sheets / Microsoft 365 Outlook',owner:'Arthur Leardi',
+       impact:'24/7 inbound capture; no manual intake or missed leads from the web',
+       inputs:'Company info, volume requirements, packaging preferences',
+       outputs:'Outlook email alert + Google Sheets log row',
+       tasks:['Form validation','Outlook email notification','Google Sheets logging','Confirmation response']},
+      {name:'Customer Account Registration',status:'live',
+       desc:'Digital new customer onboarding form at customeraccount.autotexwipers.com. Logs to Google Sheets and notifies Arthur via Microsoft 365 Outlook. Business Central customer record sync is a planned next step.',
+       platform:'Vercel / Node.js / Google Sheets / Microsoft 365 Outlook',owner:'Arthur Leardi',
+       impact:'Replaces manual account setup; creates instant digital record for every new account',
+       inputs:'Business name, contacts, shipping address, trade references',
+       outputs:'Outlook email alert + Sheets log row; BC customer record (planned)',
+       tasks:['Field validation','Duplicate detection','Outlook email notification','BC customer sync (planned)']},
+      {name:'Quote Generation Agent',status:'planned',
+       desc:'Pulls pricing and inventory data from Microsoft Business Central, then generates a formatted proposal with margin calculations, freight estimates, and upsell recommendations — delivered via Outlook.',
+       platform:'Claude API + Microsoft Business Central (pricing/inventory)',owner:'Sales Team',
+       impact:'Cuts quote turnaround from hours to minutes; eliminates pricing errors',
+       inputs:'Business Central customer record, SKU list, volume, freight zone',
+       outputs:'Formatted Word/PDF quote delivered via Microsoft 365 Outlook',
+       tasks:['Business Central pricing lookup','Margin calculator','Freight estimate','Word/PDF formatting','Outlook delivery']},
+    ]},
+    {name:'CRM & Outreach Automation',agents:[
+      {name:'CRM Data Entry Automation',status:'scope',
+       desc:'Monitors Microsoft 365 Outlook emails and call logs, then automatically creates or updates customer and contact records in Microsoft Business Central — eliminating manual data entry.',
+       platform:'Claude API + Microsoft 365 (Outlook) + Microsoft Business Central',owner:'Sales Ops',
+       impact:'Saves 30–60 min/day per rep; improves data completeness in Business Central',
+       inputs:'Outlook emails, call notes, form submissions',
+       outputs:'Updated Business Central contact/customer records',
+       tasks:['Outlook email parsing','BC contact deduplication','Deal stage updates','Activity logging to BC']},
+      {name:'Outreach Sequence Agent',status:'planned',
+       desc:'Drafts personalized multi-touch email sequences for sales development, tailored to prospect type and funnel stage. Sequences are created as Outlook drafts for rep review.',
+       platform:'Claude API + Microsoft 365 (Outlook)',owner:'Sales / BD',
+       impact:'Enables consistent follow-up at scale without burning rep time on copy',
+       inputs:'Prospect profile from Business Central, sequence type, tone preferences',
+       outputs:'3–5 Outlook email draft sequence ready for review and send',
+       tasks:['Prospect-type detection','Personalization layer','Sequence cadence logic','Outlook draft creation']},
+    ]},
+  ]},
+
+  {id:'marketing',emoji:'📣',name:'Marketing & Brand',
+   desc:'Brand identity, content creation, SEO, campaigns, and private label brand generation',
+   categories:[
+    {name:'Brand & Creative',agents:[
+      {name:'Wiper Express Brand Guide',status:'live',
+       desc:'Comprehensive single-page interactive HTML brand guide covering logo usage, color system, typography, tone of voice, and do/don\'t rules. The definitive creative reference for all WE output.',
+       platform:'Custom HTML (Claude-built)',owner:'Arthur Leardi',
+       impact:'Eliminates brand inconsistency; gives any team member or vendor a clear creative brief',
+       inputs:'Brand decisions, logo files, copy guidelines',
+       outputs:'Interactive HTML brand guide',
+       tasks:['Color system','Logo suite','Typography scale','Tone of voice rules']},
+      {name:'Private Label Brand Guide Generator',status:'progress',
+       desc:'Internal tool that generates a customized brand guide for each private label partner — pulling their colors, typography, and product line to produce a professional, deliverable HTML or PDF document.',
+       platform:'Claude API (internal tool)',owner:'Arthur Leardi',
+       impact:'Transforms a manual 4–8 hr design job into a 5-minute AI-assisted workflow',
+       inputs:'Partner name, colors, logo, product line, tone',
+       outputs:'Full brand guide document (HTML/PDF); partner-ready for Outlook delivery',
+       tasks:['Brand token ingestion','Template rendering','Logo placement','Exportable output']},
+    ]},
+    {name:'Content & SEO',agents:[
+      {name:'Product Description Generator',status:'planned',
+       desc:'Generates SEO-optimized product copy for every SKU across AutoTex, Clix, and DOGA — pulling from Microsoft Business Central item records and applying brand tone of voice consistently.',
+       platform:'Claude API + Microsoft Business Central (Item Catalog)',owner:'Marketing',
+       impact:'Covers hundreds of SKUs in hours vs. weeks; consistent voice across the entire catalog',
+       inputs:'Business Central item/SKU records, brand guidelines, target keywords',
+       outputs:'Product title, short description, long description, meta tags',
+       tasks:['BC SKU data pull','Spec-to-copy conversion','SEO keyword integration','Brand tone enforcement']},
+      {name:'SEO Research Agent',status:'scope',
+       desc:'Identifies high-value keyword opportunities in the automotive aftermarket space — wiper blades, fitment queries, fleet maintenance, and private label terms.',
+       platform:'Claude API + Web Search',owner:'Marketing',
+       impact:'Uncovers organic traffic opportunities before competitors; informs content calendar',
+       inputs:'Seed topics, competitor domains, target audience',
+       outputs:'Keyword clusters, opportunity scoring, content gap analysis; shared via Teams/Outlook',
+       tasks:['Keyword clustering','Intent classification','Competitor gap analysis','Priority scoring']},
+      {name:'Blog & Editorial Agent',status:'planned',
+       desc:'Drafts long-form blog content for wiperexpress.com — fleet maintenance guides, wiper technology explainers, seasonal tips, and industry thought leadership.',
+       platform:'Claude API',owner:'Marketing',
+       impact:'Builds organic authority and gives prospects a reason to return to the site',
+       inputs:'Topic brief, target keyword, audience type, word count',
+       outputs:'Structured draft article with meta description; delivered via Outlook for review',
+       tasks:['Outline generation','Draft writing','SEO formatting','Internal link recommendations']},
+    ]},
+    {name:'Campaigns & Social',agents:[
+      {name:'Email Campaign Agent',status:'scope',
+       desc:'Generates segmented email campaigns for distributor partners, fleet accounts, and private label prospects. Copy prepared and delivered as Microsoft 365 Outlook drafts.',
+       platform:'Claude API + Microsoft 365 (Outlook)',owner:'Marketing',
+       impact:'Accelerates campaign output; enables consistent touchpoints without a full marketing team',
+       inputs:'Campaign goal, audience segment from Business Central, offer details',
+       outputs:'Subject lines, body copy, CTA, preview text; Outlook-ready drafts',
+       tasks:['BC segment pull','A/B subject variants','Body copy generation','Outlook draft creation']},
+      {name:'Social Media Content Agent',status:'scope',
+       desc:'Drafts platform-specific social content (LinkedIn, Instagram, Facebook) tied to product launches, trade show appearances, seasonal promotions, and brand moments.',
+       platform:'Claude API',owner:'Marketing',
+       impact:'Maintains consistent brand presence without dedicated social staff',
+       inputs:'Theme, product, event, brand tone',
+       outputs:'Post copy variants per platform + hashtag suggestions; reviewed via Teams/Outlook',
+       tasks:['Platform tone adaptation','Hashtag research','Post scheduling queue','Image brief generation']},
+    ]},
+  ]},
+
+  {id:'ops',emoji:'⚙️',name:'Operations & Logistics',
+   desc:'Inventory, order processing, vendor communication, and fitment data — integrated with Microsoft Business Central',
+   categories:[
+    {name:'Inventory & Supply Chain',agents:[
+      {name:'Inventory Intelligence Agent',status:'scope',
+       desc:'Monitors stock levels across all SKUs in Microsoft Business Central, flags items approaching reorder thresholds, and generates replenishment recommendations based on historical velocity and lead times.',
+       platform:'Claude API + Microsoft Business Central (Inventory module)',owner:'Operations Manager',
+       impact:'Prevents stockouts on top-moving SKUs; reduces excess safety stock carrying costs',
+       inputs:'Business Central inventory levels, sales velocity, supplier lead times',
+       outputs:'Reorder alert list via Outlook; replenishment PO drafts in Business Central',
+       tasks:['BC inventory level monitoring','Velocity-based reorder calc','Supplier lead time pull from BC','Outlook alert distribution']},
+      {name:'Vendor Communication Agent',status:'planned',
+       desc:'Drafts POs, follow-up emails, delivery confirmation requests, and vendor exception notices — pulling structured order data from Business Central and sending polished correspondence via Outlook.',
+       platform:'Claude API + Microsoft Business Central + Microsoft 365 (Outlook)',owner:'Purchasing / Ops',
+       impact:'Eliminates repetitive email drafting; maintains consistent professional tone with all suppliers',
+       inputs:'Business Central PO data, supplier contact records, issue description',
+       outputs:'Outlook email drafts ready for review and send',
+       tasks:['BC PO data pull','PO confirmation email drafts','Shipment follow-up emails','Exception notices via Outlook']},
+    ]},
+    {name:'Order & Fulfillment',agents:[
+      {name:'Order Processing Automation',status:'scope',
+       desc:'Validates incoming orders against Business Central inventory and customer records, routes to the correct fulfillment location, and flags exceptions for human review via Outlook.',
+       platform:'Claude API + Microsoft Business Central (Sales Orders)',owner:'Operations',
+       impact:'Reduces order processing time; catches errors before they reach the warehouse',
+       inputs:'Inbound orders (EDI, Outlook email, web form); Business Central records',
+       outputs:'Validated Business Central sales order; routing instructions; Outlook exception alerts',
+       tasks:['Data validation against BC','Inventory availability check','Fulfillment routing logic','Outlook exception alerts']},
+      {name:'Shipping & Tracking Agent',status:'scope',
+       desc:'Monitors in-transit shipments across carriers, flags exceptions, and drafts proactive customer notifications sent via Microsoft 365 Outlook. Shipment records updated in Business Central.',
+       platform:'Claude API + carrier APIs + Microsoft Business Central + Microsoft 365 (Outlook)',owner:'Operations / Customer Service',
+       impact:'Reduces inbound WISMO inquiries; catches delivery failures before customers call',
+       inputs:'Business Central shipment records, carrier tracking APIs, customer contact info',
+       outputs:'BC status updates; Outlook draft customer notifications',
+       tasks:['Multi-carrier tracking ingestion','Delay detection','Exception alert routing','Outlook customer notification drafts']},
+    ]},
+    {name:'Fitment & Product Data',agents:[
+      {name:'Fitment Data Management Agent',status:'planned',
+       desc:'Validates, normalizes, and formats vehicle fitment data files for distributors, e-commerce platforms, and the wiperexpress.com lookup. Handles ACES/PIES standards. Syncs validated data to Business Central item records.',
+       platform:'Claude API + Python + Microsoft Business Central (Items)',owner:'Product / Ops',
+       impact:'Eliminates hours of manual data cleanup per cycle; reduces fitment errors at retail',
+       inputs:'Raw fitment files (Excel/CSV/XML); Business Central item records',
+       outputs:'Validated ACES/PIES-formatted file; Business Central item record updates',
+       tasks:['Format validation','ACES/PIES normalization','Error flagging','BC item record sync','Upload-ready export']},
+      {name:'SKU Catalog Agent',status:'scope',
+       desc:'Uses Microsoft Business Central as the master product record and detects discrepancies across all sales channels and data feeds — flagging inconsistencies in descriptions, attributes, and images.',
+       platform:'Claude API + Microsoft Business Central (Item Catalog)',owner:'Product / Marketing',
+       impact:'Business Central as single source of truth; prevents catalog errors that affect customer orders',
+       inputs:'Business Central master item catalog, channel data feeds',
+       outputs:'Discrepancy report via Outlook; corrected data file; BC record updates',
+       tasks:['BC item catalog export','Cross-channel comparison','Attribute standardization','BC change log']},
+    ]},
+  ]},
+
+  {id:'cx',emoji:'🎧',name:'Customer Service & Support',
+   desc:'Inbound inquiry handling, returns processing, account management, and customer onboarding',
+   categories:[
+    {name:'Inbound Handling',agents:[
+      {name:'Customer Inquiry Agent',status:'planned',
+       desc:'Handles FAQ-level customer inquiries via web chat or Outlook email — product availability, fitment questions, order status from Business Central, and pricing — escalating complex issues to a human rep.',
+       platform:'Claude API + wiperexpress.com + Microsoft Business Central + Microsoft 365 (Outlook)',owner:'Customer Service',
+       impact:'Handles 60–80% of routine inquiries without human involvement; 24/7 coverage',
+       inputs:'Customer message; Business Central order/account records',
+       outputs:'AI-generated Outlook reply or escalation with context summary to rep',
+       tasks:['Intent classification','FAQ response generation','BC order status lookup','Escalation routing via Outlook']},
+      {name:'Returns & Claims Agent',status:'scope',
+       desc:'Guides customers through warranty claim or return submission, validates eligibility against Business Central records, routes to the appropriate handler, and generates required documentation.',
+       platform:'Claude API + Microsoft Business Central + Microsoft 365 (Outlook)',owner:'Customer Service / Ops',
+       impact:'Reduces per-claim handling time; consistent policy application across all cases',
+       inputs:'Customer info, Business Central purchase/order records, issue description',
+       outputs:'Eligibility decision; BC service record created; Outlook routing notification',
+       tasks:['BC purchase record lookup','Policy eligibility check','Claim documentation','Handler routing via Outlook']},
+    ]},
+    {name:'Account Management',agents:[
+      {name:'Account Status Agent',status:'planned',
+       desc:'Allows existing customers to self-serve Business Central account information — open orders, invoice history, credit balance — without requiring a rep to look it up.',
+       platform:'Claude API + Microsoft Business Central (Customer Ledger / AR)',owner:'Customer Service / Finance',
+       impact:'Deflects routine account inquiry calls; frees reps for high-value conversations',
+       inputs:'Customer authentication; Business Central account ID',
+       outputs:'Account status summary pulled from Business Central; statement via Outlook',
+       tasks:['Secure authentication','BC customer ledger query','Statement generation','Contact update write-back to BC']},
+      {name:'Customer Onboarding Concierge',status:'scope',
+       desc:'Guides newly approved accounts through their first order — product line orientation, ordering process, fitment lookup, and contact directory — delivered as a personalized Outlook email sequence.',
+       platform:'Claude API + Microsoft 365 (Outlook) + Microsoft Business Central',owner:'Sales / Customer Service',
+       impact:'Reduces first-order friction; accelerates time-to-first-purchase for new accounts',
+       inputs:'New Business Central customer record, product lines of interest',
+       outputs:'Personalized onboarding Outlook email sequence',
+       tasks:['BC new customer trigger','Product line intro generation','Ordering walkthrough','Key contact directory email']},
+    ]},
+  ]},
+
+  {id:'finance',emoji:'💼',name:'Finance & Admin',
+   desc:'Credit decisioning, accounts receivable, invoice processing, and financial reporting via Microsoft Business Central',
+   categories:[
+    {name:'Credit & Risk',agents:[
+      {name:'Credit Application + AI Approval',status:'live',
+       desc:'Full credit application system at creditapp.autotexwipers.com. AI-powered instant approval for applications under $5,000. Applications above $5K require trade references and generate a structured business report. Business Central customer sync is a planned next step.',
+       platform:'Vercel / Claude API / Google Sheets / Microsoft 365 Outlook / BC sync (planned)',owner:'Arthur Leardi / Finance',
+       impact:'Instant decisions under $5K; eliminates manual review bottleneck for standard applications',
+       inputs:'Business info, trade references, requested credit limit',
+       outputs:'Approval/referral decision; business report; Sheets log; Outlook email alert; BC customer record (planned)',
+       tasks:['AI credit decisioning','Business report generation','Reference verification routing','Outlook + Sheets notification','BC customer sync (planned)']},
+      {name:'Risk Monitoring Agent',status:'planned',
+       desc:'Monitors Business Central customer ledger for signals of increased credit risk — overdue invoices, payment pattern changes, AR aging shifts — and flags accounts for proactive review.',
+       platform:'Claude API + Microsoft Business Central (AR / Customer Ledger)',owner:'Finance / Sales',
+       impact:'Catches at-risk accounts before they become bad debt; enables proactive account management',
+       inputs:'Business Central AR aging, customer payment history',
+       outputs:'Risk-flagged account report via Outlook; Business Central customer flag update',
+       tasks:['BC AR aging pull','Payment trend detection','Risk scoring','Outlook alert to finance/sales']},
+    ]},
+    {name:'AP / AR & Billing',agents:[
+      {name:'Invoice Processing Agent',status:'scope',
+       desc:'Extracts structured data from supplier invoices arriving via Microsoft 365 Outlook, validates against Business Central purchase orders, codes to the correct GL account, and routes for approval.',
+       platform:'Claude API + Microsoft 365 (Outlook) + Microsoft Business Central (AP/Purchase)',owner:'Finance / Admin',
+       impact:'Eliminates manual invoice keying; catches discrepancies before payment',
+       inputs:'Supplier invoice via Outlook email/attachment; Business Central PO records',
+       outputs:'Business Central purchase invoice record; GL coding; Outlook approval routing',
+       tasks:['Outlook attachment extraction','Invoice parsing','BC PO matching','GL code assignment','BC invoice creation + approval routing']},
+      {name:'AR Follow-up Agent',status:'planned',
+       desc:'Monitors Business Central AR aging and auto-drafts a tiered sequence of payment reminder Outlook emails — from friendly nudge to formal past-due notice — for rep review before sending.',
+       platform:'Claude API + Microsoft Business Central (AR) + Microsoft 365 (Outlook)',owner:'Finance',
+       impact:'Consistent, timely AR follow-up without manual drafting; reduces DSO',
+       inputs:'Business Central AR aging report; customer contact info from BC',
+       outputs:'Tiered Outlook draft email sequence per aging bucket',
+       tasks:['BC AR aging pull','Aging tier classification','Message tone calibration','Outlook draft creation per tier']},
+      {name:'Financial Reporting Agent',status:'scope',
+       desc:'Aggregates data from Business Central (AR, AP, orders, inventory, GL) to generate weekly and monthly financial summaries with plain-English variance commentary and trend analysis.',
+       platform:'Claude API + Microsoft Business Central (Finance) + Power BI',owner:'CFO / Finance',
+       impact:'Eliminates hours of manual report assembly; delivers consistent, timely financial visibility',
+       inputs:'Business Central GL, AR, AP, orders, inventory data',
+       outputs:'Weekly/monthly financial summary; Power BI report; Outlook distribution',
+       tasks:['BC financial data pull','Variance calculation','Commentary generation','Power BI rendering','Outlook distribution']},
+    ]},
+  ]},
+
+  {id:'product',emoji:'🛠️',name:'Product & Engineering / IT',
+   desc:'Internal tools, deployed applications, data infrastructure, and web platform development',
+   categories:[
+    {name:'Deployed Applications',agents:[
+      {name:'Onboarding & Training App',status:'live',
+       desc:'Complete 10-module interactive training application for new Wiper Express staff. Covers brand pillars, product lines, private label program, customer onboarding, and company culture. Includes a 12-question scored quiz.',
+       platform:'Custom HTML (Claude-built)',owner:'HR / Leadership',
+       impact:'Self-serve onboarding eliminates manual training sessions; consistent experience for every new hire',
+       inputs:'Pillar Guidebook content, brand guide',
+       outputs:'Interactive training modules + scored quiz',
+       tasks:['10 training modules','12-question scored quiz','Progress tracking','Brand design system']},
+      {name:'Customer Account Form App',status:'live',
+       desc:'Digital new customer registration at customeraccount.autotexwipers.com. Integrated with Google Sheets logging and Microsoft 365 Outlook notification. Business Central customer record creation is a planned next step.',
+       platform:'Vercel / Node.js / GitHub / Microsoft 365 Outlook',owner:'Arthur Leardi',
+       impact:'Digital-first account intake; zero missed leads from web traffic',
+       inputs:'Business details, contacts, shipping info',
+       outputs:'Sheets row + Outlook email alert; BC record creation (planned)',
+       tasks:['Form UI','Server-side validation','Google Sheets API write','Outlook email alert','BC customer sync (planned)']},
+      {name:'Private Label Request Form App',status:'live',
+       desc:'Private label inquiry intake at privatelabelapp.autotexwipers.com. Captures volume requirements, packaging needs, and contact info. Logs to Sheets and alerts Arthur via Microsoft 365 Outlook.',
+       platform:'Vercel / Node.js / GitHub / Microsoft 365 Outlook',owner:'Arthur Leardi',
+       impact:'24/7 PL lead capture; instant notification and structured data log',
+       inputs:'Company, volume, packaging, timeline',
+       outputs:'Sheets row + Outlook email alert to Arthur',
+       tasks:['Form UI','Serverless API endpoint','Sheets logging','Outlook email notification']},
+      {name:'Credit Application App',status:'live',
+       desc:'Full credit application system at creditapp.autotexwipers.com with AI-powered decisioning for applications under $5K and structured business reports for all submissions. Microsoft 365 Outlook notifications live; Business Central sync planned.',
+       platform:'Vercel / Claude API / Node.js / Microsoft 365 Outlook',owner:'Arthur Leardi / Finance',
+       impact:'Instant credit decisions for standard applications; professional presentation to every applicant',
+       inputs:'Business info, credit limit request, references',
+       outputs:'Decision + business report + Sheets log + Outlook alert; BC sync (planned)',
+       tasks:['Application form UI','AI approval logic','Business report generation','Sheets + Outlook integration','BC customer sync (planned)']},
+    ]},
+    {name:'Web Platform',agents:[
+      {name:'wiperexpress.com Build-out',status:'progress',
+       desc:'Full website buildout including homepage, brand landing pages (AutoTex, Clix, DOGA), product line pages, fitment lookup, and private label section. Architecture mapped; development in progress. Product data sourced from Business Central.',
+       platform:'Custom HTML / Vercel / GitHub / Business Central (product data)',owner:'Arthur Leardi',
+       impact:'Primary digital presence and lead generation engine for all customer segments',
+       inputs:'Brand guide, Business Central product/SKU data, site architecture',
+       outputs:'Production website with all core pages; fitment lookup; PL inquiry form',
+       tasks:['Homepage + hero','Brand landing pages','Product line pages','Private label section','Fitment lookup','BC product data feed']},
+      {name:'Website AI Assistant / Chatbot',status:'planned',
+       desc:'Customer-facing AI assistant embedded on wiperexpress.com to handle product questions, fitment lookups, private label inquiries, and rep routing. Can query Business Central for live inventory.',
+       platform:'Claude API + wiperexpress.com + Microsoft Business Central',owner:'Product / Marketing',
+       impact:'24/7 customer engagement without live chat staffing; reduces friction in the buyer journey',
+       inputs:'Visitor message; Business Central product/inventory data; fitment data',
+       outputs:'AI-generated answer or form/page link; Outlook escalation to rep if needed',
+       tasks:['Intent detection','Product knowledge base','Fitment query handling','BC inventory lookup','Form/page routing','Outlook escalation']},
+    ]},
+    {name:'Data & Infrastructure',agents:[
+      {name:'Fitment Data Pipeline',status:'planned',
+       desc:'Automated ingestion, validation, and formatting pipeline for vehicle fitment data — ensuring clean, ACES/PIES-compliant files are always ready for distributor uploads and the website fitment tool. Validated data syncs to Business Central item records.',
+       platform:'Python / Claude API / GitHub Actions / Microsoft Business Central',owner:'Engineering / Ops',
+       impact:'Eliminates manual fitment data prep; ensures accuracy across all distribution channels',
+       inputs:'Raw fitment exports from supplier or internal catalog',
+       outputs:'Validated ACES/PIES-formatted files; Business Central item record updates',
+       tasks:['Ingestion script','Validation rules engine','Error reporting','BC item sync','Auto-formatted distributor export']},
+      {name:'Shared API Infrastructure (wex-api)',status:'live',
+       desc:'Centralized Vercel serverless API project powering all deployed WE applications. Provides /api/submit and /api/generate endpoints. Microsoft 365 Outlook via Microsoft Graph API is the target email layer, replacing the current Gmail/Nodemailer setup.',
+       platform:'Vercel / Node.js / Google Sheets / Microsoft 365 (Graph API — migration target)',owner:'Arthur Leardi / Engineering',
+       impact:'Reusable backend layer reduces per-app development time significantly',
+       inputs:'Form payloads from any WE application',
+       outputs:'Outlook email alerts + Google Sheets log writes; future: Business Central API writes',
+       tasks:['/api/submit endpoint','/api/generate endpoint','Google Sheets webhook','Microsoft Graph API email migration','BC API integration layer (planned)']},
+    ]},
+  ]},
+];
+
+// ── HELPERS ───────────────────────────────────────────────────────
+function abadge(s){const t=STATUS[s];return `<span class="abadge ${t.cls}">${t.label}</span>`;}
+function adot(s){return `<span class="adot" style="background:${STATUS[s].dot}"></span>`;}
+
+function makePrompt(a,dept,cat){
+  return [
+    `I'm Arthur Leardi at Wiper Express (WEXCO Industries / AutoTex), an automotive wiper blade supplier based in Pine Brook, NJ.`,
+    ``,
+    `I want to build the following AI agent for our ${dept} department:`,
+    ``,
+    `AGENT: ${a.name}`,
+    `CATEGORY: ${cat}`,
+    `CURRENT STATUS: ${STATUS[a.status].label}`,
+    ``,
+    `DESCRIPTION:`,
+    a.desc,
+    ``,
+    `PLATFORM / TOOLS:`,
+    a.platform,
+    ``,
+    `INPUTS:`,
+    a.inputs,
+    ``,
+    `OUTPUTS:`,
+    a.outputs,
+    ``,
+    `BUSINESS IMPACT:`,
+    a.impact,
+    ``,
+    `SUB-TASKS:`,
+    a.tasks.join(', '),
+    ``,
+    `OUR TECH STACK:`,
+    `- ERP: Microsoft Business Central`,
+    `- Email & Calendar: Microsoft 365 (Outlook / Teams)`,
+    `- Hosting: Vercel (GitHub-connected, username: aleardilll)`,
+    `- AI: Claude API (Anthropic, model: claude-sonnet-4-20250514)`,
+    `- Shared API: wex-api Vercel project with /api/submit and /api/generate endpoints`,
+    `- Email migration: from Nodemailer/Gmail to Microsoft Graph API`,
+    `- Domains: autotexwipers.com, wiperexpress.com`,
+    `- Data logging: Google Sheets via Apps Script (GBT Assistant project)`,
+    `- Service account: wx-newcustomer@gbt-assistant.iam.gserviceaccount.com`,
+    ``,
+    `Please guide me step-by-step on how to plan, scope, and begin building this agent. Start by asking any clarifying questions you need, then walk me through the architecture, the integrations required, and what we should build first.`
+  ].join('\n');
+}
+
+// ── MODAL ─────────────────────────────────────────────────────────
+function openModal(agentName, prompt){
+  document.getElementById('modalTitle').textContent = agentName;
+  document.getElementById('promptBox').value = prompt;
+  document.getElementById('btnCopyTxt').textContent = 'Copy Prompt';
+  document.getElementById('btnCopy').classList.remove('copied');
+  document.getElementById('modalOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  // auto-select text
+  setTimeout(()=>{
+    const box = document.getElementById('promptBox');
+    box.focus();
+    box.select();
+  }, 250);
+}
+
+function closeModal(){
+  document.getElementById('modalOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function closeModalOutside(e){
+  if(e.target === document.getElementById('modalOverlay')) closeModal();
+}
+
+function copyPrompt(){
+  const box = document.getElementById('promptBox');
+  const btn = document.getElementById('btnCopy');
+  const txt = document.getElementById('btnCopyTxt');
+
+  // Try modern clipboard API first
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(box.value).then(()=>{
+      showCopied(btn, txt);
+    }).catch(()=>{ fallbackCopy(box, btn, txt); });
+  } else {
+    fallbackCopy(box, btn, txt);
+  }
+}
+
+function fallbackCopy(box, btn, txt){
+  // Select all text and use execCommand
+  box.select();
+  box.setSelectionRange(0, 99999);
+  try{
+    document.execCommand('copy');
+    showCopied(btn, txt);
+  } catch(e){
+    // Last resort: just select so user can Ctrl+C
+    txt.textContent = 'Selected — press Ctrl+C';
+  }
+}
+
+function showCopied(btn, txt){
+  btn.classList.add('copied');
+  txt.textContent = '✓ Copied!';
+  setTimeout(()=>{
+    btn.classList.remove('copied');
+    txt.textContent = 'Copy Prompt';
+  }, 2500);
+}
+
+// Esc key closes modal
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape') closeModal();
+});
+
+// ── COUNT ─────────────────────────────────────────────────────────
+function countDept(d){
+  const c={live:0,progress:0,planned:0,scope:0,total:0};
+  d.categories.forEach(cat=>cat.agents.forEach(a=>{c[a.status]++;c.total++;}));
+  return c;
+}
+function totalAll(){
+  const c={live:0,progress:0,planned:0,scope:0,total:0};
+  DEPARTMENTS.forEach(d=>{const dc=countDept(d);Object.keys(c).forEach(k=>c[k]+=dc[k]);});
+  return c;
+}
+
+// ── BUILD DOM ─────────────────────────────────────────────────────
+function buildAgent(a, deptName, catName){
+  const id='a'+Math.random().toString(36).slice(2,9);
+  const prompt = makePrompt(a, deptName, catName);
+  // Store prompts in a global map to avoid encoding issues
+  window._prompts = window._prompts || {};
+  window._prompts[id] = {name: a.name, prompt};
+
+  const tasks = a.tasks ? `<div class="dtasks"><div class="dtask-lbl">Sub-tasks</div><div class="dtask-list">${a.tasks.map(t=>`<span class="dtask-pill">${t}</span>`).join('')}</div></div>` : '';
+  return `<div class="agent" id="${id}">
+    <div class="agent-top" onclick="toggleAgent('${id}')">
+      ${adot(a.status)}
+      <div class="aname">${a.name}</div>
+      ${abadge(a.status)}
+    </div>
+    <div class="agent-detail">
+      <div class="ddesc">${a.desc}</div>
+      <div class="dgrid">
+        <div class="dfield"><div class="dflbl">Platform / Tool</div><div class="dfval">${a.platform}</div></div>
+        <div class="dfield"><div class="dflbl">Owner / User</div><div class="dfval">${a.owner}</div></div>
+        <div class="dfield"><div class="dflbl">Inputs</div><div class="dfval">${a.inputs}</div></div>
+        <div class="dfield"><div class="dflbl">Outputs</div><div class="dfval">${a.outputs}</div></div>
+        <div class="dfield dimpact"><div class="dflbl">Business Impact</div><div class="dfval">${a.impact}</div></div>
+        ${tasks}
+      </div>
+      <div class="dactions">
+        <button class="btn-build" onclick="event.stopPropagation(); var p=window._prompts['${id}']; openModal(p.name, p.prompt);">
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+            <circle cx="7.5" cy="7.5" r="6" stroke="white" stroke-width="1.3"/>
+            <path d="M5.5 6.5h4M5.5 8.5h2.5" stroke="white" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+          Help Me Build This
+        </button>
+        <div class="bhint">Opens a step-by-step build guide for Claude</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function buildCat(cat, deptName){
+  const id='c'+Math.random().toString(36).slice(2,9);
+  return `<div class="cat">
+    <div class="cat-hdr" id="${id}-h" onclick="toggleCat('${id}')">
+      <div class="cat-dot"></div>
+      <div class="cat-name">${cat.name}</div>
+      <div class="cat-count">${cat.agents.length} agent${cat.agents.length!==1?'s':''}</div>
+      <div class="cat-chev"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    </div>
+    <div class="cat-body" id="${id}-b">${cat.agents.map(a=>buildAgent(a,deptName,cat.name)).join('')}</div>
+  </div>`;
+}
+
+function buildBadges(c){
+  return (c.live?`<span class="badge live">${c.live} Live</span>`:'')+
+         (c.progress?`<span class="badge progress">${c.progress} In Progress</span>`:'')+
+         (c.planned?`<span class="badge planned">${c.planned} Planned</span>`:'')+
+         (c.scope?`<span class="badge scope">${c.scope} Scoping</span>`:'');
+}
+
+function buildDept(d){
+  const c=countDept(d),id='dept-'+d.id;
+  return `<div class="dept-card" data-dept="${d.id}">
+    <div class="dept-hdr" id="${id}-h" onclick="toggleDept('${d.id}')">
+      <div class="dept-ico">${d.emoji}</div>
+      <div class="dept-info">
+        <div class="dept-name">${d.name}</div>
+        <div class="dept-desc">${d.desc}</div>
+      </div>
+      <div class="dept-badges">${buildBadges(c)}</div>
+      <div class="dept-chev"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    </div>
+    <div class="dept-body" id="${id}-b">${d.categories.map(cat=>buildCat(cat,d.name)).join('')}</div>
+  </div>`;
+}
+
+function buildStats(){
+  const c=totalAll();
+  document.getElementById('statsBar').innerHTML=`
+    <div class="stat"><div class="snum blue">${c.total}</div><div class="slbl">Total Agents</div></div>
+    <div class="sdiv"></div>
+    <div class="stat"><div class="snum green">${c.live}</div><div class="slbl">Live / Built</div></div>
+    <div class="sdiv"></div>
+    <div class="stat"><div class="snum blue">${c.progress}</div><div class="slbl">In Progress</div></div>
+    <div class="sdiv"></div>
+    <div class="stat"><div class="snum amber">${c.planned}</div><div class="slbl">Planned</div></div>
+    <div class="sdiv"></div>
+    <div class="stat"><div class="snum gray">${c.scope}</div><div class="slbl">Needs Scoping</div></div>
+    <div class="sdiv"></div>
+    <div class="stat"><div class="snum">${DEPARTMENTS.length}</div><div class="slbl">Departments</div></div>`;
+}
+
+window.toggleDept=function(id){
+  document.getElementById('dept-'+id+'-h').classList.toggle('open');
+  document.getElementById('dept-'+id+'-b').classList.toggle('open');
+};
+window.toggleCat=function(id){
+  document.getElementById(id+'-h').classList.toggle('open');
+  document.getElementById(id+'-b').classList.toggle('open');
+};
+window.toggleAgent=function(id){document.getElementById(id).classList.toggle('active');};
+
+document.addEventListener('DOMContentLoaded',()=>{
+  buildStats();
+  document.getElementById('main').innerHTML=DEPARTMENTS.map(d=>buildDept(d)).join('');
+  document.getElementById('footerDate').textContent=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long'});
+});
+</script>
+</body>
+</html>
